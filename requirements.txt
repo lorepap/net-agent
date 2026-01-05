@@ -1,0 +1,21 @@
+# Core Agent & Simulation
+langchain
+# langgraph
+requests
+
+# Data Generation & Evaluation
+pandas
+numpy
+# transformers # Uncomment for real usage
+# peft         # Uncomment for real usage
+# datasets     # Uncomment for real usage
+# vllm         # Uncomment for real usage
+# torch        # Uncomment for real usage
+
+# Deployment
+# autoawq      # Uncomment for real usage
+
+# Mininet / Networking
+# mininet      # Usually installed via apt/system (sudo apt install mininet)
+scapy
+
