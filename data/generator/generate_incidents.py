@@ -7,23 +7,14 @@ from pathlib import Path
 
 # Ground Truth Database
 INCIDENT_TYPES = {
-    "latency_spike": {
-        "description": "High latency detected on core uplinks.",
-        "root_cause": "Congestion on primary link due to backup",
-        "recommended_fix": "Reroute traffic via secondary path using PBR or adjust OSPF cost.",
-        "commands": ["router ospf 1", "interface TenGigabitEthernet1/0/1", "ip ospf cost 1000"]
-    },
-    "packet_drop": {
-        "description": "Significant packet loss observed.",
-        "root_cause": "BGP Neighbor instability causing route flapping",
-        "recommended_fix": "Verify BGP config and check physical layer.",
-        "commands": ["show ip bgp summary", "clear ip bgp * soft"]
-    },
-    "interface_down": {
-        "description": "Interface reported as down.",
-        "root_cause": "Physical link failure or administrative shutdown",
-        "recommended_fix": "Check cable or issue no shutdown.",
-        "commands": ["interface GigabitEthernet0/0/1", "no shutdown"]
+    "missing_rules": {
+        "description": "H1 cannot ping H2 (Packet Loss).",
+        "root_cause": "Missing forwarding rules (packet_counter[0] == 0).",
+        "recommended_fix": "Install forwarding rules.",
+        "commands": [
+            "table_add forward_table forward 1 => 2",
+            "table_add forward_table forward 2 => 1"
+        ]
     },
     "normal": {
         "description": "Network operating normally.",

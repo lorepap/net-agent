@@ -12,6 +12,7 @@ An autonomous AI agent that diagnoses network anomalies (latency spikes, packet 
 - **🤖 Agentic Reasoning**: Uses LangGraph to orchestrate a ReAct-style agent that decides which tools to call
 - **🔧 Real Network Tools**: Integrates with Mininet + BMv2 for real P4 switch operations
 - **📡 P4 Telemetry**: Reads actual packet counters and queue depths from BMv2 registers
+- **👨‍⚖️ Interactive Judge**: Real-time LLM evaluation of agent actions during live demos
 - **🧠 Local LLM**: Runs entirely on your machine using Ollama (Llama 3) - no API keys needed
 - **📊 Real Data**: Generates training data from real network events, not just synthetic mocks
 
@@ -32,28 +33,54 @@ python -m agent.graph "There's high latency on cs-core-01"
 🔍 NETWORK DIAGNOSIS AGENT
 ======================================================================
 
-📝 Issue: The interface on cs-access-01 seems to be down
+📝 Issue: diagnose why h1 can't ping h2
 
 ----------------------------------------------------------------------
-🔧 Step 1: Calling tool 'fetch_logs'
-   Args: {'device_id': 'cs-access-01'}
-📊 Tool result: <189> Jan 05 10:00:00 cs-access-01 %LINK-3-UPDOWN: Interface GigabitEthernet0/0/1...
+🔧 Step 1: Calling tool 'read_p4_register'
+   Args: {'register_name': 'packet_counter'}
 
-🔧 Step 2: Calling tool 'check_interface_status'
-   Args: {'device_id': 'cs-access-01', 'interface': 'GigabitEthernet0/0/1'}
-📊 Tool result: Interface GigabitEthernet0/0/1 ... Admin status: administratively down...
+📊 Tool result: REAL P4 TELEMETRY (BMv2):
+RuntimeCmd: packet_counter[0]= 0
+[AUTOMATED ANALYSIS] Counter is 0. This confirms NO TRAFFIC matches the rules.
 
-🔧 Step 3: Calling tool 'propose_config_change'
-   Args: {'device_id': 'cs-access-01', 'config_commands': ['interface GigabitEthernet0/0/1', 'no shutdown']}
+----------------------------------------------------------------------
+
+� FINAL DIAGNOSIS:
+To resolve this issue, you can install basic forwarding rules using the 
+`apply_config_change` command.
+
+======================================================================
+Describe the network issue: fix it
+
+======================================================================
+🔍 NETWORK DIAGNOSIS AGENT
+======================================================================
+
+📝 Issue: fix it
+
+----------------------------------------------------------------------
+🔧 Step 1: Calling tool 'apply_config_change'
+   Args: {'config_commands': ['table_add forward_table forward 1 => 2', 
+          'table_add forward_table forward 2 => 1']}
+
+📊 Tool result: Cmd: table_add forward_table forward 1 => 2
+Result: SUCCESS: Rule installed successfully.
+Cmd: table_add forward_table forward 2 => 1
+Result: SUCCESS: Rule installed successfully.
+
 
 ----------------------------------------------------------------------
 
 📋 FINAL DIAGNOSIS:
+The forwarding rules have been successfully installed on the switch. This should allow H1 to ping H2.
 
-📋 ROOT CAUSE: Interface GigabitEthernet0/0/1 is administratively shut down
-🔧 RECOMMENDED FIX: Enable the interface using 'no shutdown' command
-
-[Proposed configuration displayed]
+======================================================================
+👨‍⚖️ AUTOMATED JUDGE EVALUATION (Llama 3)
+======================================================================
+   📊 Score: 10/10
+   📝 Reasoning: Perfect root cause identification (Packet Counter=0) 
+                 and correct fix application (Forwarding Rules).
+   ✅ Safety Check: PASSED
 ======================================================================
 ```
 
@@ -68,7 +95,7 @@ python -m agent.graph "There's high latency on cs-core-01"
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/network-agent.git
+   git clone https://github.com/lorepap/network-agent.git
    cd network-agent
    ```
 
@@ -127,12 +154,24 @@ python -m agent.graph "There's high latency on cs-core-01"
 │  │  Generates validated configuration proposals         │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
+
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Diagnosis + Fix                           │
 │  ROOT CAUSE: Congestion on primary link                     │
 │  FIX: Adjust OSPF cost to reroute traffic                   │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 LLM-as-a-Judge (Llama 3)                     │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │  Evaluates diagnosis against Ground Truth (if demo)     │ │
+│ │  Checks for Safety Violations (e.g. reload command)     │ │
+│ └───────────────────────┬─────────────────────────────────┘ │
+│                         ▼                                   │
+│              📊 Score: 10/10 | ✅ Safe                       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -157,6 +196,11 @@ h1 (10.0.0.1) ←→ [BMv2 P4 Switch] ←→ h2 (10.0.0.2)
               • drop_counter
 ```
 
+**To run the interactive agent:**
+```bash
+sudo ./run_agent.sh
+```
+
 **Test the BMv2 integration:**
 ```bash
 # Run automated tests (requires sudo)
@@ -168,41 +212,29 @@ The agent can:
 - Detect dropped packets via drop counters  
 - Install/clear forwarding rules to fix issues
 
-## 📂 Project Structure
 
-```
-├── agent/                  # Agent logic (LangGraph)
-│   ├── graph.py            # ReAct agent implementation
-│   ├── tools.py            # Network diagnostic tools
-│   └── state.py            # Agent state definition
-├── p4src/                  # P4 switch programs
-│   ├── basic_forward.p4    # L2 forwarding with counters
-│   └── basic_forward.json  # Compiled P4 program
-├── data/                   # Data generation
-│   └── generator/          # Mininet + BMv2 scripts
-│       ├── test_bmv2.py    # BMv2 integration tests
-│       └── simple_bmv2_topo.py
-├── evaluation/             # LLM-as-a-Judge pipeline
-│   └── judge.py            # Evaluation with Ollama or mock
-├── deployment/             # Docker + vLLM serving
-└── requirements.txt        # Python dependencies
-```
 
-## 🧪 Additional Commands
+## 🧠 Fine-Tuning
+You can fine-tune the Llama 3 model on your own P4 network incidents.
 
-**Generate synthetic incidents:**
-```bash
-python data/generator/generate_incidents.py --count 5
-```
+1. **Generate Data**:
+   ```bash
+   python data/generator/generate_incidents.py --count 100
+   ```
 
-**Run evaluation pipeline:**
-```bash
-# Mock evaluation (fast, rule-based)
-python evaluation/judge.py --backend mock
+2. **Preprocess**:
+   Convert incidents to Alpaca format for instruction tuning.
+   ```bash
+   python data/preprocessing/convert_to_alpaca.py
+   ```
 
-# LLM evaluation (requires Ollama)
-python evaluation/judge.py --backend ollama --model llama3
-```
+3. **Train (QLoRA)**:
+   Requires a GPU.
+   ```bash
+   python deployment/train.py
+   ```
+
+
 
 ## 📝 License
 

@@ -1,22 +1,34 @@
 #!/bin/bash
+# Script to serve the fine-tuned network agent model using vLLM
+# This provides an OpenAI-compatible API endpoint for low-latency inference.
 
-# Serve script for Network Agent
-echo "Starting vLLM Inference Server..."
+MODEL_PATH="./llama-3-8b-network-expert"
+PORT=8000
 
-# Check if docker is installed
-if ! command -v docker &> /dev/null
-then
-    echo "Docker could not be found. Please install Docker."
-    exit 1
+# Check if model exists (after fine-tuning)
+if [ ! -d "$MODEL_PATH" ]; then
+    echo "⚠️  Fine-tuned model not found at $MODEL_PATH"
+    echo "    Using base model 'meta-llama/Meta-Llama-3-8B-Instruct' for demonstration."
+    MODEL_PATH="meta-llama/Meta-Llama-3-8B-Instruct"
 fi
 
-# Build
-echo "Building Docker image..."
-docker build -t network-agent-vllm ./deployment
+echo "🚀 Starting vLLM Inference Server..."
+echo "Model: $MODEL_PATH"
+echo "Port: $PORT"
 
-# Run
-echo "Running Container..."
-# Using --gpus all for CUDA
-docker run --gpus all -p 8000:8000 -v $(pwd)/fine_tuning/results:/model network-agent-vllm
+# Run vLLM (Optimized for T4)
+# --quantization awq/gptq could be added if model was quantized
+python3 -m vllm.entrypoints.openai.api_server \
+    --model $MODEL_PATH \
+    --port $PORT \
+    --dtype float16 \
+    --gpu-memory-utilization 0.9 \
+    --max-model-len 4096
 
-echo "Server running at http://localhost:8000"
+# Usage:
+# curl http://localhost:8000/v1/chat/completions \
+#   -H "Content-Type: application/json" \
+#   -d '{
+#     "model": "llama-3-8b-network-expert",
+#     "messages": [{"role": "user", "content": "Diagnose high latency on cs-core-01"}]
+#   }'

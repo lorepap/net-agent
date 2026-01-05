@@ -5,68 +5,46 @@ import argparse
 from datetime import datetime, timedelta
 
 # Constants
-DEVICES = [
-    "cs-core-01", "cs-core-02", 
-    "cs-dist-01", "cs-dist-02", 
-    "cs-access-01", "cs-access-02", "cs-access-03"
-]
+# Constants
+DEVICES = ["s1"]
 
-INTERFACES = [
-    "TenGigabitEthernet1/0/1", "TenGigabitEthernet1/0/2",
-    "GigabitEthernet0/0/1", "GigabitEthernet0/0/2"
-]
+INTERFACES = ["port 1", "port 2"]
 
-SYSLOG_LEVELS = ["INFO", "WARNING", "ERROR", "CRITICAL"]
+SYSLOG_LEVELS = ["INFO"]
 
 # Scenarios
 SCENARIOS = {
     "normal": {
-        "latency_min": 1, "latency_max": 20,
-        "packet_loss_prob": 0.001,
-        "error_prob": 0.01
+        "latency_min": 1, "latency_max": 5,
+        "packet_loss_prob": 0.0,
+        "error_prob": 0.05
     },
-    "latency_spike": {
-        "latency_min": 150, "latency_max": 800,
-        "packet_loss_prob": 0.05,
-        "error_prob": 0.1
-    },
-    "packet_drop": {
-        "latency_min": 20, "latency_max": 50,
-        "packet_loss_prob": 0.3,
-        "error_prob": 0.3,
-        "specific_error": "BGP_NEIGHBOR_DOWN"
-    },
-    "interface_down": {
-        "latency_min": 0, "latency_max": 0,
-        "packet_loss_prob": 1.0,
+    "missing_rules": {
+        "latency_min": 0, "latency_max": 0, # Traffic blocked
+        "packet_loss_prob": 1.0, # All packets dropped
         "error_prob": 1.0,
-        "specific_error": "LINK_DOWN"
+        "specific_error": "MISSING_RULES"
     }
 }
 
 def generate_syslog(timestamp, device, scenario_type):
-    """Generates a single syslog message."""
+    """Generates a single P4 Runtime log message."""
     scenario = SCENARIOS[scenario_type]
     
-    if "specific_error" in scenario and random.random() < scenario["error_prob"]:
-        error_code = scenario["specific_error"]
-        level = "CRITICAL"
-        if error_code == "BGP_NEIGHBOR_DOWN":
-            msg = f"%BGP-5-ADJCHANGE: neighbor 10.0.0.2 Down BGP Notification sent"
-        elif error_code == "LINK_DOWN":
-            interface = random.choice(INTERFACES)
-            msg = f"%LINK-3-UPDOWN: Interface {interface}, changed state to down"
+    if "specific_error" in scenario and scenario["specific_error"] == "MISSING_RULES":
+        if random.random() < 0.8:
+            msg = "RuntimeCmd: packet_counter[0]= 0"
         else:
-             msg = "Unknown Error"
-    elif random.random() < scenario["error_prob"]:
-        level = random.choice(["WARNING", "ERROR"])
-        interface = random.choice(INTERFACES)
-        msg = f"%INTF-4-EXCESSIVE_ERRORS: Excessive errors on {interface}"
+            msg = "Control utility for runtime P4 table manipulation"
     else:
-        level = "INFO"
-        msg = "Configured from console by console"
+        # Normal traffic
+        if random.random() < 0.8:
+             count = random.randint(50, 5000)
+             msg = f"RuntimeCmd: packet_counter[0]= {count}"
+        else:
+             msg = "Control utility for runtime P4 table manipulation"
 
-    log = f"<{random.randint(1, 190)}> {timestamp} {device} {level}: {msg}"
+    log = f"{msg}"
     return log
 
 def generate_netflow(timestamp, device, scenario_type):

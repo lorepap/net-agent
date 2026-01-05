@@ -6,15 +6,17 @@ langgraph>=0.6.0
 requests
 
 # Data Generation & Evaluation
+# Data Generation & Evaluation
+# Data Generation & Evaluation
 pandas
 numpy
-# transformers # Uncomment for real usage
-# peft         # Uncomment for real usage
-# datasets     # Uncomment for real usage
-# vllm         # Uncomment for real usage
-# torch        # Uncomment for real usage
-
-# Deployment
+# transformers
+# peft
+# datasets
+# vllm
+# torch
+# bitsandbytes
+# ragas
 # autoawq      # Uncomment for real usage
 
 # Mininet / Networking
