@@ -68,7 +68,7 @@ python -m agent.graph "There's high latency on cs-core-01"
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/network-agent.git
+   git clone https://github.com/lorepap/network-agent.git
    cd network-agent
    ```
 
@@ -168,26 +168,6 @@ The agent can:
 - Detect dropped packets via drop counters  
 - Install/clear forwarding rules to fix issues
 
-## 📂 Project Structure
-
-```
-├── agent/                  # Agent logic (LangGraph)
-│   ├── graph.py            # ReAct agent implementation
-│   ├── tools.py            # Network diagnostic tools
-│   └── state.py            # Agent state definition
-├── p4src/                  # P4 switch programs
-│   ├── basic_forward.p4    # L2 forwarding with counters
-│   └── basic_forward.json  # Compiled P4 program
-├── data/                   # Data generation
-│   └── generator/          # Mininet + BMv2 scripts
-│       ├── test_bmv2.py    # BMv2 integration tests
-│       └── simple_bmv2_topo.py
-├── evaluation/             # LLM-as-a-Judge pipeline
-│   └── judge.py            # Evaluation with Ollama or mock
-├── deployment/             # Docker + vLLM serving
-└── requirements.txt        # Python dependencies
-```
-
 ## 🧪 Additional Commands
 
 **Generate synthetic incidents:**
@@ -203,7 +183,3 @@ python evaluation/judge.py --backend mock
 # LLM evaluation (requires Ollama)
 python evaluation/judge.py --backend ollama --model llama3
 ```
-
-## 📝 License
-
-MIT
