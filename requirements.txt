@@ -1,6 +1,8 @@
 # Core Agent & Simulation
-langchain
-# langgraph
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-ollama>=0.3.0
+langgraph>=0.6.0
 requests
 
 # Data Generation & Evaluation
@@ -18,4 +20,3 @@ numpy
 # Mininet / Networking
 # mininet      # Usually installed via apt/system (sudo apt install mininet)
 scapy
-

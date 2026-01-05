@@ -1,111 +1,209 @@
 # Autonomous Network Anomaly Diagnosis Agent
 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
+![LangGraph](https://img.shields.io/badge/LangGraph-0.6-purple)
+![BMv2](https://img.shields.io/badge/BMv2-P4_Switch-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Status](https://img.shields.io/badge/Status-Prototype-orange)
 
-An autonomous multi-agent system capable of diagnosing network anomalies (latency spikes, packet drops) and proposing configuration fixes by interacting with a simulated network environment. 
+An autonomous AI agent that diagnoses network anomalies (latency spikes, packet drops, interface failures) and proposes configuration fixes using **real LLM reasoning** via Ollama and **real P4 switch telemetry** via BMv2.
 
-This project demonstrates the application of **Agentic AI** in the domain of **Network Engineering**, showcasing:
-- **Synthetic Data Generation**: Creating realistic Syslog and NetFlow datasets.
-- **Agentic Reasoning**: Using LangGraph to orchestrate tool usage.
-- **Domain Specific Tools**: Simulating CLI commands (`show interface`) and P4/Tofino register queries.
-- **Automated Evaluation**: Implementing an "LLM-as-a-Judge" pipeline with RAGAS metrics.
+## ✨ Features
 
-## 🏗 Architecture
+- **🤖 Agentic Reasoning**: Uses LangGraph to orchestrate a ReAct-style agent that decides which tools to call
+- **🔧 Real Network Tools**: Integrates with Mininet + BMv2 for real P4 switch operations
+- **📡 P4 Telemetry**: Reads actual packet counters and queue depths from BMv2 registers
+- **🧠 Local LLM**: Runs entirely on your machine using Ollama (Llama 3) - no API keys needed
+- **📊 Real Data**: Generates training data from real network events, not just synthetic mocks
 
-The system consists of four main components:
+## 🎬 Quick Demo
 
-1.  **Data Generator**: Creates "Incidents" (pairs of network logs and ground truth root causes).
-2.  **Agent Core**: A LangGraph agent that can fetch logs, check interface status, and propose fixes.
-3.  **Evaluator**: A pipeline that grades the agent's proposed fixes against the ground truth using a Judge model (local or mock).
-4.  **Deployment**: Docker configurations for serving the fine-tuned model with vLLM.
+```bash
+# After setup, run the agent interactively
+source venv/bin/activate
+python -m agent.graph
+
+# Or diagnose a specific issue
+python -m agent.graph "There's high latency on cs-core-01"
+```
+
+**Example Output:**
+```
+======================================================================
+🔍 NETWORK DIAGNOSIS AGENT
+======================================================================
+
+📝 Issue: The interface on cs-access-01 seems to be down
+
+----------------------------------------------------------------------
+🔧 Step 1: Calling tool 'fetch_logs'
+   Args: {'device_id': 'cs-access-01'}
+📊 Tool result: <189> Jan 05 10:00:00 cs-access-01 %LINK-3-UPDOWN: Interface GigabitEthernet0/0/1...
+
+🔧 Step 2: Calling tool 'check_interface_status'
+   Args: {'device_id': 'cs-access-01', 'interface': 'GigabitEthernet0/0/1'}
+📊 Tool result: Interface GigabitEthernet0/0/1 ... Admin status: administratively down...
+
+🔧 Step 3: Calling tool 'propose_config_change'
+   Args: {'device_id': 'cs-access-01', 'config_commands': ['interface GigabitEthernet0/0/1', 'no shutdown']}
+
+----------------------------------------------------------------------
+
+📋 FINAL DIAGNOSIS:
+
+📋 ROOT CAUSE: Interface GigabitEthernet0/0/1 is administratively shut down
+🔧 RECOMMENDED FIX: Enable the interface using 'no shutdown' command
+
+[Proposed configuration displayed]
+======================================================================
+```
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Python 3.8+
-- Docker (optional, for deployment)
-- [Ollama](https://ollama.com) (optional, for local LLM evaluation)
+- **Python 3.9+** (required for LangGraph)
+- **Ollama** (for local LLM inference)
 
 ### Installation
 
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/yourusername/network-agent.git
-    cd network-agent
-    ```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/network-agent.git
+   cd network-agent
+   ```
 
-2.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+2. **Install Ollama:**
+   ```bash
+   curl -fsSL https://ollama.com/install.sh | sh
+   ollama pull llama3
+   ```
 
-## 🛠 Usage
+3. **Create virtual environment and install dependencies:**
+   ```bash
+   python3.9 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
 
-### 1. Generate Synthetic Data
-Create a dataset of network incidents (logs + ground truth).
-```bash
-python3 data/generator/generate_incidents.py --count 5
+4. **Start Ollama server** (in a separate terminal):
+   ```bash
+   ollama serve
+   ```
+
+5. **Run the agent:**
+   ```bash
+   source venv/bin/activate
+   python -m agent.graph
+   ```
+
+## 🏗 Architecture
+
 ```
-This will create incident folders in `data/custom_dataset/`.
-
-### 2. Run the Agent (Demo Mode)
-Run the agent against the simulated environment.
-```bash
-export PYTHONPATH=$PYTHONPATH:.
-python3 -m agent.graph
+┌─────────────────────────────────────────────────────────────┐
+│                     User Query                               │
+│         "High latency on core router cs-core-01"            │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   LangGraph Agent                            │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                 Ollama (Llama 3)                     │    │
+│  │  Reasons about the problem and decides which        │    │
+│  │  tools to call to gather diagnostic information     │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                          │                                   │
+│            ┌─────────────┼─────────────┐                    │
+│            ▼             ▼             ▼                    │
+│     ┌──────────┐  ┌──────────┐  ┌──────────┐               │
+│     │fetch_logs│  │check_int │  │read_p4_  │               │
+│     │          │  │_status   │  │register  │               │
+│     └──────────┘  └──────────┘  └──────────┘               │
+│            │             │             │                    │
+│            └─────────────┼─────────────┘                    │
+│                          ▼                                   │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              propose_config_change                   │    │
+│  │  Generates validated configuration proposals         │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Diagnosis + Fix                           │
+│  ROOT CAUSE: Congestion on primary link                     │
+│  FIX: Adjust OSPF cost to reroute traffic                   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 3. Evaluate Performance
-Run the LLM-as-a-Judge pipeline.
+## 🔧 Available Tools
 
-**Using Mock Judge (Fast, Rule-based):**
-```bash
-python3 evaluation/judge.py --backend mock
+| Tool | Description |
+|------|-------------|
+| `fetch_logs` | Retrieves syslog entries from network devices |
+| `check_interface_status` | Checks interface state and error counters (simulates `show interface`) |
+| `read_p4_register` | Queries P4/Tofino switch registers for queue depth and drop counters |
+| `propose_config_change` | Generates validated configuration change proposals |
+
+## 🧠 Real P4/BMv2 Integration
+
+This project uses **real P4 programmable switches** via BMv2 (Behavioral Model v2) for network telemetry:
+
+```
+h1 (10.0.0.1) ←→ [BMv2 P4 Switch] ←→ h2 (10.0.0.2)
+                      ↓
+              P4 Registers:
+              • packet_counter[port]
+              • drop_counter
 ```
 
-**Using Local LLM (Recommended):**
-1.  Ensure Ollama is running (`ollama serve`).
-2.  Pull a model: `ollama pull llama3`.
-3.  Run the judge:
-    ```bash
-    python3 evaluation/judge.py --backend ollama --model llama3
-    ```
-
-### 4. Run Mininet Simulation (Linux Only)
-If you have Mininet installed, you can run the live network simulation.
+**Test the BMv2 integration:**
 ```bash
-sudo python3 data/generator/mininet_topology.py
+# Run automated tests (requires sudo)
+sudo python3 data/generator/test_bmv2.py
 ```
-This will:
-1. Start a 3-router topology.
-2. Start a background script simulating "P4 Drop Counters" related to R1.
-3. Open a Mininet CLI.
+
+The agent can:
+- Read real packet counters from P4 registers
+- Detect dropped packets via drop counters  
+- Install/clear forwarding rules to fix issues
 
 ## 📂 Project Structure
 
 ```
 ├── agent/                  # Agent logic (LangGraph)
-│   ├── graph.py            # Main application graph
-│   ├── tools.py            # Network simulation tools
+│   ├── graph.py            # ReAct agent implementation
+│   ├── tools.py            # Network diagnostic tools
 │   └── state.py            # Agent state definition
-├── data/                   # Data generation scripts
-│   ├── generator/          # Scripts to generate logs
-│   └── custom_dataset/     # Output directory for datasets
-├── deployment/             # Deployment artifacts
-│   ├── Dockerfile          # vLLM container definition
-│   └── serve.sh            # Serving script
-├── evaluation/             # Evaluation pipeline
-│   └── judge.py            # LLM-as-a-Judge script
-├── fine_tuning/            # Model training
-│   └── train.py            # QLoRA fine-tuning script
-└── requirements.txt        # Project dependencies
+├── p4src/                  # P4 switch programs
+│   ├── basic_forward.p4    # L2 forwarding with counters
+│   └── basic_forward.json  # Compiled P4 program
+├── data/                   # Data generation
+│   └── generator/          # Mininet + BMv2 scripts
+│       ├── test_bmv2.py    # BMv2 integration tests
+│       └── simple_bmv2_topo.py
+├── evaluation/             # LLM-as-a-Judge pipeline
+│   └── judge.py            # Evaluation with Ollama or mock
+├── deployment/             # Docker + vLLM serving
+└── requirements.txt        # Python dependencies
 ```
 
-## 🧠 "The Twist"
-This project includes a specialized tool `read_p4_register` in `agent/tools.py`. This simulates querying a **Tofino P4 switch's hardware registers** (e.g., for micro-burst detection), bridging the gap between high-level intent-based networking and low-level data plane telemetry.
+## 🧪 Additional Commands
+
+**Generate synthetic incidents:**
+```bash
+python data/generator/generate_incidents.py --count 5
+```
+
+**Run evaluation pipeline:**
+```bash
+# Mock evaluation (fast, rule-based)
+python evaluation/judge.py --backend mock
+
+# LLM evaluation (requires Ollama)
+python evaluation/judge.py --backend ollama --model llama3
+```
 
 ## 📝 License
+
 MIT
