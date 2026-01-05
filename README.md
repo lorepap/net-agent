@@ -5,7 +5,7 @@
 ![BMv2](https://img.shields.io/badge/BMv2-P4_Switch-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-An autonomous AI agent that diagnoses network anomalies (latency spikes, packet drops, interface failures) and proposes configuration fixes using **real LLM reasoning** via Ollama and **real P4 switch telemetry** via BMv2.
+An autonomous AI agent that diagnoses network anomalies (latency spikes, packet drops, interface failures) and proposes configuration fixes using **LLM reasoning** via Ollama and **real P4 switch telemetry** via BMv2.
 
 ## ✨ Features
 
