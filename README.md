@@ -14,7 +14,6 @@ An autonomous AI agent that diagnoses network anomalies (latency spikes, packet 
 - **📡 P4 Telemetry**: Reads actual packet counters and queue depths from BMv2 registers
 - **👨‍⚖️ Interactive Judge**: Real-time LLM evaluation of agent actions during live demos
 - **🧠 Local LLM**: Runs entirely on your machine using Ollama (Llama 3) - no API keys needed
-- **📊 Real Data**: Generates training data from real network events, not just synthetic mocks
 
 ## 🎬 Quick Demo
 
